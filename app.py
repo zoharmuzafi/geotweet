@@ -38,8 +38,6 @@ class StdOutListener(StreamListener):
     def on_data(self, data):
         # convert returned data to json
         json_data = json.loads(data)
-        if 'geo' in json_data.keys():
-            print json_data['geo']
         # store only data with geo point
         if 'geo' in json_data.keys() and json_data['geo']:
             # calculate the score of the tweet
@@ -103,11 +101,10 @@ def index():
         distance = request.form['distance']
         res = es.search(index="tweets", doc_type="tweet", body=search_query(latitude, longitude, distance))
         data = [data_point[u'_source'][u'text'] for data_point in res[u'hits'][u'hits']]
-        print(data)
         return render_template('index.html', data=data)
     return render_template('index.html')
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)
   
