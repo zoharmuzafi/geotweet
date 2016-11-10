@@ -8,6 +8,9 @@ from tweepy import Stream
 # import es 
 from elasticsearch import Elasticsearch, ElasticsearchException
 
+# scoring tool
+from textblob import TextBlob
+
 import json
 import logging
 import os
@@ -24,11 +27,12 @@ access_token_secret = os.environ['ACCESS_TOKEN_SECRET']
 
 # tweet class with the relevant data that will be index to ES
 class Tweet(object):
-    def __init__(self, tweet_id, text, geo):
+    def __init__(self, tweet_id, text, geo, score):
         self.tweet_id = str(tweet_id)
         self.text = text
         self.lat = geo[0]
         self.lon = geo[1]
+        self.score = score
 
 class StdOutListener(StreamListener):
     def on_data(self, data):
@@ -36,14 +40,18 @@ class StdOutListener(StreamListener):
         json_data = json.loads(data)
         # store only data with geo point
         if json_data['geo']:
+            # calculate the score of the tweet
+            score = TextBlob(json_data['text']).sentiment.polarity
             # create object of tweet with the relevant data from the response
-            tweet = Tweet(json_data['id'], json_data['text'], json_data['geo'][u'coordinates'])
+            tweet = Tweet(json_data['id'], json_data['text'], json_data['geo'][u'coordinates'], score)
+
             try:
                 # index to es
                 es.index(index="tweets", doc_type="tweet", id=tweet.tweet_id, body={"text": tweet.text,
                                                                                     "location": {"lat": tweet.lat, 
                                                                                                  "lon": tweet.lon
-                                                                                                }
+                                                                                                },
+                                                                                    "score": tweet.score
                                                                                     })
             except ElasticsearchException:
                 logging.exception('')
@@ -58,6 +66,9 @@ class StdOutListener(StreamListener):
 def search(latitude, longitude, distance):
     return json.dumps({
             "size": 250,
+            "sort" : [
+                        { "score" : {"order" : "desc"}}
+                    ],
             "query": 
                 { "bool" : 
                     { "must" : 
@@ -83,9 +94,8 @@ def index():
         latitude = request.form['lat']
         longitude = request.form['long']
         distance = request.form['distance']
-        search
         res = es.search(index="tweets", doc_type="tweet", body=search(latitude, longitude, distance))
-
+        print res
     return render_template('index.html')
 
 if __name__ == '__main__':
