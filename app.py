@@ -25,12 +25,12 @@ access_token_secret = os.environ['ACCESS_TOKEN_SECRET']
 # tweet class with the relevant data that will be index to ES
 class Tweet(object):
     def __init__(self, tweet_id, text, geo):
-        self.tweet_id = tweet_id
+        self.tweet_id = str(tweet_id)
         self.text = text
-        self.geo = geo
+        self.lat = geo[0]
+        self.lon = geo[1]
 
 class StdOutListener(StreamListener):
-    
     def on_data(self, data):
         # convert returned data to json
         json_data = json.loads(data)
@@ -40,7 +40,11 @@ class StdOutListener(StreamListener):
             tweet = Tweet(json_data['id'], json_data['text'], json_data['geo'][u'coordinates'])
             try:
                 # index to es
-                es.index(index="tweets", doc_type="tweet", id=tweet.tweet_id, body={"text": tweet.text, "geo": tweet.geo})
+                es.index(index="tweets", doc_type="tweet", id=tweet.tweet_id, body={"text": tweet.text,
+                                                                                    "location": {"lat": tweet.lat, 
+                                                                                                 "lon": tweet.lon
+                                                                                                }
+                                                                                    })
             except ElasticsearchException:
                 logging.exception('')
 
@@ -50,11 +54,38 @@ class StdOutListener(StreamListener):
         print "error", status
 
 
+# es query for tweets in specific location
+def search(latitude, longitude, distance):
+    return json.dumps({
+            "size": 250,
+            "query": 
+                { "bool" : 
+                    { "must" : 
+                        {"match_all" : {}
+                    }, "filter" : 
+                        {"geo_distance" : 
+                            {"distance" : 
+                                "{distance}km".format(distance=distance), 
+                                "location" : 
+                                    "{latitude}, {longitude}"
+                                    .format(latitude=latitude, 
+                                        longitude=longitude)
+                            }
+                        }
+                    }
+                }
+            })
+
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         latitude = request.form['lat']
         longitude = request.form['long']
+        distance = request.form['distance']
+        search
+        res = es.search(index="tweets", doc_type="tweet", body=search(latitude, longitude, distance))
+
     return render_template('index.html')
 
 if __name__ == '__main__':
