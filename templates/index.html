@@ -9,5 +9,12 @@
     			<input type="number" name="long" step="any" placeholder="lon">
     			<input type="number" name="distance" placeholder="distance(KM)">
   			<input type=submit value="search">
+  			<div>
+  				<ul>
+	  				{% for i in data %}
+	  					<li>{{i}}</li>
+	  				{% endfor %}
+  				</ul>
+  			</div>
     </body>
 </html>

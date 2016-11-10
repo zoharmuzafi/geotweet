@@ -55,7 +55,6 @@ class StdOutListener(StreamListener):
                                                                                     })
             except ElasticsearchException:
                 logging.exception('')
-
         return True
 
     def on_error(self, status):
@@ -95,7 +94,8 @@ def index():
         longitude = request.form['long']
         distance = request.form['distance']
         res = es.search(index="tweets", doc_type="tweet", body=search(latitude, longitude, distance))
-        print res
+        data = [data_point[u'_source'][u'text'] for data_point in res[u'hits'][u'hits']]
+        return render_template('index.html', data=data)
     return render_template('index.html')
 
 if __name__ == '__main__':
