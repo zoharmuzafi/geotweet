@@ -38,8 +38,10 @@ class StdOutListener(StreamListener):
     def on_data(self, data):
         # convert returned data to json
         json_data = json.loads(data)
+        if 'geo' in json_data.keys():
+            print json_data['geo']
         # store only data with geo point
-        if json_data['geo']:
+        if 'geo' in json_data.keys() and json_data['geo']:
             # calculate the score of the tweet
             score = TextBlob(json_data['text']).sentiment.polarity
             # create object of tweet with the relevant data from the response
@@ -60,9 +62,15 @@ class StdOutListener(StreamListener):
     def on_error(self, status):
         print "error", status
 
+#handles Twitter authetification and the connection to Twitter Streaming API
+auth = OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+stream = Stream(auth, StdOutListener())
+stream.filter(locations=[-180,-90,180,90])
+
 
 # es query for tweets in specific location
-def search(latitude, longitude, distance):
+def search_query(latitude, longitude, distance):
     return json.dumps({
             "size": 250,
             "sort" : [
@@ -93,15 +101,13 @@ def index():
         latitude = request.form['lat']
         longitude = request.form['long']
         distance = request.form['distance']
-        res = es.search(index="tweets", doc_type="tweet", body=search(latitude, longitude, distance))
+        res = es.search(index="tweets", doc_type="tweet", body=search_query(latitude, longitude, distance))
         data = [data_point[u'_source'][u'text'] for data_point in res[u'hits'][u'hits']]
+        print(data)
         return render_template('index.html', data=data)
     return render_template('index.html')
 
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-    #This handles Twitter authetification and the connection to Twitter Streaming API
-    auth = OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
-    stream = Stream(auth, StdOutListener())
-    stream.filter(locations=[-122.75,36.8,-121.75,37.8,-74,40,-73,41])
+  
