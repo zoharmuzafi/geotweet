@@ -3,11 +3,15 @@
         <title>GeoTweet</title>
     </head>
     <body>
+    		<div>
+    			{{message}}
+    		</div>
         <h1>search</h1>
         <form method="POST" action="/">
-    			<input type="number" name="lat" step="any" placeholder="lat">
-    			<input type="number" name="long" step="any" placeholder="lon">
-    			<input type="number" name="distance" placeholder="distance(KM)">
+    			<input type="number" name="lat" step="any" placeholder="lat" max="90" min="-90" required>
+    			<input type="number" name="long" step="any" placeholder="lon" max="180" min="-180" required>
+    			<input type="number" name="distance" placeholder="distance(KM)" min="1" required>
+    			<input type="text" name="search_key" placeholder="search key(optional)">
   			<input type=submit value="search">
   			<div>
   				<ul>
