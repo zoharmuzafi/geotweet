@@ -10,4 +10,4 @@ The app uses the twitter streaming api.
 Python, Flask, Elasticsearch, Tweepy, HTML.
 
 ##Link
-The is available on Heroku(https://geotweetcollect.herokuapp.com/)
+The is available on [Heroku](https://geotweetcollect.herokuapp.com/)
