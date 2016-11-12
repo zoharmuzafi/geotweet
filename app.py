@@ -5,12 +5,12 @@ from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
 from tweepy import Stream
 
-# import es 
-from elasticsearch import Elasticsearch, ElasticsearchException
+# import es
+from elasticsearch import Elasticsearch, ElasticsearchException, helpers
+import certifi
+from es_queries import search_query
 
-# scoring tool
 from textblob import TextBlob
-
 import json
 import logging
 import os
@@ -19,7 +19,8 @@ import threading
 app = Flask(__name__)
 
 # config es
-es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
+es = Elasticsearch([{'host': 'f840a143ab945c2b14a9abf4bc0764c9.us-east-1.aws.found.io', 'port': 9243}],
+    http_auth=(os.environ['ES_USERNAME'],os.environ['ES_PASSWORD']), use_ssl=True)
 
 consumer_key = os.environ['CONSUMER_KEY']
 consumer_secret = os.environ['CONSUMER_SECRET']
@@ -37,8 +38,9 @@ class Tweet(object):
 
 # handele the twitter streaming
 class StdOutListener(StreamListener):
+    def __init__(self):
+        self.tweets_list = []
     def on_data(self, data):
-        print data
         # convert returned data to json
         json_data = json.loads(data)
         # store only data with geo point
@@ -47,15 +49,24 @@ class StdOutListener(StreamListener):
             score = TextBlob(json_data['text']).sentiment.polarity
             # create object of tweet with the relevant data from the response
             tweet = Tweet(json_data['id'], json_data['text'], json_data['geo'][u'coordinates'], score)
-
+            # append tweet to a list that in the future will save as bulk 
+            self.tweets_list.append({
+                    "_index": "tweets",
+                    "_type": "tweet",
+                    "_id": tweet.tweet_id,
+                    "_source": {
+                        "text": tweet.text,
+                        "location": {"lat": tweet.lat, 
+                        "lon": tweet.lon
+                        },
+                        "score": tweet.score
+                    }
+                })
             try:
-                # index to es
-                es.index(index="tweets", doc_type="tweet", id=tweet.tweet_id, body={"text": tweet.text,
-                                                                                    "location": {"lat": tweet.lat, 
-                                                                                                 "lon": tweet.lon
-                                                                                                },
-                                                                                    "score": tweet.score
-                                                                                    })
+                # index bulk to reduce calls to es
+                if len(self.tweets_list) > 1000:
+                    helpers.bulk(es, self.tweets_list)
+                    self.tweets_list =[]
             except ElasticsearchException:
                 logging.exception('')
         return True
@@ -63,59 +74,8 @@ class StdOutListener(StreamListener):
     def on_error(self, status):
         print "error", status
 
-
-# es query for tweets in specific location
-def search_query(latitude, longitude, distance, search_key=''):
-    if search_key:
-        return json.dumps({
-                "size": 250,
-                "sort" : [
-                            { "score" : {"order" : "desc"}}
-                        ],
-                "query": 
-                    { "bool" : 
-                        { "must" : 
-                            { "match": {"text": "{search_key}".format(search_key=search_key)}
-                        }, "filter" : 
-                            {"geo_distance" : 
-                                {"distance" : 
-                                    "{distance}km".format(distance=distance), 
-                                    "location" : 
-                                        "{latitude}, {longitude}"
-                                        .format(latitude=latitude, 
-                                            longitude=longitude)
-                                }
-                            }
-                        }
-                    }
-                })
-    else:
-        return json.dumps({
-                "size": 250,
-                "sort" : [
-                            { "score" : {"order" : "desc"}}
-                        ],
-                "query": 
-                    { "bool" : 
-                        { "must" : 
-                            { "match_all": {}
-                        }, "filter" : 
-                            {"geo_distance" : 
-                                {"distance" : 
-                                    "{distance}km".format(distance=distance), 
-                                    "location" : 
-                                        "{latitude}, {longitude}"
-                                        .format(latitude=latitude, 
-                                            longitude=longitude)
-                                }
-                            }
-                        }
-                    }
-                })
-
-
 #handles Twitter authetification and the connection to Twitter Streaming API
-def twiteer():
+def twitter():
     auth = OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
     stream = Stream(auth, StdOutListener())
@@ -137,10 +97,10 @@ def index():
                 return render_template('index.html', message='invalid values')
     return render_template('index.html')
 
+# threading for the twitter + start 
+twitter_stream = threading.Thread(name='twitter_function', target=twitter)
+twitter_stream.setDaemon(True)
+twitter_stream.start()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
-    twitter = threading.Thread(name='twiteer', target=twiteer)
-    form_post = threading.Thread(target=index)
-    twiteer().start()
-    index().start()
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
