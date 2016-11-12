@@ -55,3 +55,4 @@ target/
 
 # env file
 env.sh
+.env
