@@ -89,7 +89,7 @@ def index():
             longitude = request.form['long']
             distance = request.form['distance']
             search_key = request.form['search_key']
-            if int(latitude) in range(-90,90) and int(longitude) in range(-180,180) and distance > 0:
+            if float(latitude) in range(-90,90) and float(longitude) in range(-180,180) and distance > 0:
                 res = es.search(index="tweets", doc_type="tweet", body=search_query(latitude, longitude, distance, search_key))
                 data = [data_point[u'_source'][u'text'] for data_point in res[u'hits'][u'hits']]
                 return render_template('index.html', data=data, message='success')
@@ -103,4 +103,4 @@ twitter_stream.setDaemon(True)
 twitter_stream.start()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
