@@ -95,7 +95,7 @@ def index():
             longitude = request.form['long']
             distance = request.form['distance']
             search_key = request.form['search_key']
-            if int(latitude) in range(-90,90) and int(longitude) in range(-180,180) and distance > 0:
+            if -90 <= float(latitude) <= 90 and -180 <= float(longitude) <= 180  and distance > 0:
                 res = es.search(index="tweets", doc_type="tweet", body=search_query(latitude, longitude, distance, search_key))
                 data = [data_point[u'_source'] for data_point in res[u'hits'][u'hits']]
                 return render_template('index.html', data=data, message='success', sndmap=marked_map(data, latitude, longitude))
