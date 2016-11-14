@@ -1,6 +1,8 @@
 <html>
     <head>
         <title>GeoTweet</title>
+        {{"decoupled-map"|googlemap_js(37.4419, -122.1419, markers=[(37.4419, -122.1419)])}}
+            {{sndmap.js}}
     </head>
     <body>
     		<div>
@@ -20,5 +22,11 @@
 	  				{% endfor %}
   				</ul>
   			</div>
+
+        <h3> Example for different icons in multiple markers with infoboxes</h3>
+        {% if sndmap %}
+        {{sndmap.html}}
+        {% endif %}
     </body>
 </html>
+

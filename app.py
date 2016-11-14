@@ -11,6 +11,9 @@ import certifi
 from es_queries import search_query
 
 from textblob import TextBlob
+# google map
+from flask_googlemaps import GoogleMaps, Map
+from google_map_functions import marked_map
 import json
 import logging
 import os
@@ -26,6 +29,8 @@ consumer_key = os.environ['CONSUMER_KEY']
 consumer_secret = os.environ['CONSUMER_SECRET']
 access_token = os.environ['ACCESS_TOKEN']
 access_token_secret = os.environ['ACCESS_TOKEN_SECRET']
+
+GoogleMaps(app, key=os.environ['GOOGLEMAPS_KEY'])
 
 # tweet class with the relevant data that will be index to ES
 class Tweet(object):
@@ -92,10 +97,10 @@ def index():
             if int(latitude) in range(-90,90) and int(longitude) in range(-180,180) and distance > 0:
                 res = es.search(index="tweets", doc_type="tweet", body=search_query(latitude, longitude, distance, search_key))
                 data = [data_point[u'_source'][u'text'] for data_point in res[u'hits'][u'hits']]
-                return render_template('index.html', data=data, message='success')
+                return render_template('index.html', data=data, message='success', sndmap=marked_map(data))
             else:
                 return render_template('index.html', message='invalid values')
-    return render_template('index.html')
+    return render_template('index.html', sndmap='')
 
 # threading for the twitter + start 
 twitter_stream = threading.Thread(name='twitter_function', target=twitter)
