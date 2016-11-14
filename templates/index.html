@@ -18,15 +18,15 @@
   			<div>
   				<ul>
 	  				{% for i in data %}
-	  					<li>{{i}}</li>
+	  					<li>{{i.text}}</li>
 	  				{% endfor %}
   				</ul>
   			</div>
-
-        <h3> Example for different icons in multiple markers with infoboxes</h3>
-        {% if sndmap %}
-        {{sndmap.html}}
-        {% endif %}
+        <div>
+          {% if sndmap %}
+            {{sndmap.html}}
+          {% endif %}
+        </div>
     </body>
 </html>
 
