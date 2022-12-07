@@ -1,6 +1,6 @@
 amqp==2.1.1
 billiard==3.5.0.2
-certifi==2016.9.26
+certifi==2022.12.7
 click==6.6
 elasticsearch==5.0.1
 Flask==0.11.1
